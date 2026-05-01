@@ -1,6 +1,12 @@
 package routes
 
-import "net/http"
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/bulanda/stock-market/src/services"
+)
 
 func Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /wallets/{wallet_id}/stocks/{stock_name}", handleWalletStockOperation)
@@ -12,10 +18,70 @@ func Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /chaos", handleChaos)
 }
 
+func handleGetBankStocks(w http.ResponseWriter, r *http.Request) {
+	stocks, err := services.GetBankStocks(r.Context())
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]any{"stocks": stocks}); err != nil {
+		log.Printf("[handleGetBankStocks] failed to encode response: %v", err)
+	}
+}
+func handleSetBankStocks(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Stocks []services.StockEntry `json:"stocks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := services.SetBankStocks(r.Context(), body.Stocks); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleGetWallet(w http.ResponseWriter, r *http.Request) {
+	walletID := r.PathValue("wallet_id")
+
+	wallet, err := services.GetWallet(r.Context(), walletID)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if wallet == nil {
+		http.Error(w, "wallet not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(wallet); err != nil {
+		log.Printf("[handleGetWallet] failed to encode response: %v", err)
+	}
+}
+func handleGetWalletStock(w http.ResponseWriter, r *http.Request) {
+	walletID := r.PathValue("wallet_id")
+	stockName := r.PathValue("stock_name")
+
+	qty, walletExists, err := services.GetWalletStockQuantity(r.Context(), walletID, stockName)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !walletExists {
+		http.Error(w, "wallet not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(qty); err != nil {
+		log.Printf("[handleGetWalletStock] failed to encode response: %v", err)
+	}
+}
+
 func handleWalletStockOperation(w http.ResponseWriter, r *http.Request) {}
-func handleGetWalletStock(w http.ResponseWriter, r *http.Request)       {}
-func handleGetWallet(w http.ResponseWriter, r *http.Request)            {}
-func handleGetBankStocks(w http.ResponseWriter, r *http.Request)        {}
-func handleSetBankStocks(w http.ResponseWriter, r *http.Request)        {}
 func handleGetLog(w http.ResponseWriter, r *http.Request)               {}
 func handleChaos(w http.ResponseWriter, r *http.Request)                {}

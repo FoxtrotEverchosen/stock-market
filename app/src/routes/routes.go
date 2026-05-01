@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -82,6 +83,39 @@ func handleGetWalletStock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleWalletStockOperation(w http.ResponseWriter, r *http.Request) {}
-func handleGetLog(w http.ResponseWriter, r *http.Request)               {}
-func handleChaos(w http.ResponseWriter, r *http.Request)                {}
+func handleWalletStockOperation(w http.ResponseWriter, r *http.Request) {
+	walletID := r.PathValue("wallet_id")
+	stockName := r.PathValue("stock_name")
+
+	var body struct {
+		Type string `json:"type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if body.Type != "buy" && body.Type != "sell" {
+		http.Error(w, "type must be buy or sell", http.StatusBadRequest)
+		return
+	}
+
+	err := services.ExecuteTrade(r.Context(), walletID, stockName, body.Type)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrStockNotFound):
+			http.Error(w, "stock not found", http.StatusNotFound)
+		case errors.Is(err, services.ErrInsufficientBankStock):
+			http.Error(w, "insufficient stock in bank", http.StatusBadRequest)
+		case errors.Is(err, services.ErrInsufficientWalletStock):
+			http.Error(w, "insufficient stock in wallet", http.StatusBadRequest)
+		default:
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleGetLog(w http.ResponseWriter, r *http.Request) {}
+func handleChaos(w http.ResponseWriter, r *http.Request)  {}

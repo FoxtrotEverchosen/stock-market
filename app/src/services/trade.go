@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -112,6 +111,3 @@ func ExecuteTrade(ctx context.Context, walletID, stockName, tradeType string) er
 		return fmt.Errorf("unexpected result: %v", result)
 	}
 }
-
-// keep compiler happy until audit log endpoint is wired
-var _ = json.Marshal

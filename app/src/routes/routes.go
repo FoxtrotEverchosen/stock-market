@@ -117,5 +117,17 @@ func handleWalletStockOperation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func handleGetLog(w http.ResponseWriter, r *http.Request) {}
-func handleChaos(w http.ResponseWriter, r *http.Request)  {}
+func handleGetLog(w http.ResponseWriter, r *http.Request) {
+	entries, err := services.GetAuditLog(r.Context())
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]any{"log": entries}); err != nil {
+		log.Printf("[handleGetLog] failed to encode response: %v", err)
+	}
+}
+
+func handleChaos(w http.ResponseWriter, r *http.Request) {}

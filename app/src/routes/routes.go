@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/bulanda/stock-market/src/services"
 )
@@ -130,4 +131,7 @@ func handleGetLog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleChaos(w http.ResponseWriter, r *http.Request) {}
+func handleChaos(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	os.Exit(1)
+}

@@ -21,7 +21,7 @@ On Windows:
 ./start.bat 8080
  ```
 
-On Linux/MacOS (you may need to make the script executalbe):
+On Linux/MacOS (you may need to make the script executable):
 ```bash 
 chmod +x start.sh
 ./start.sh 8080
@@ -74,7 +74,7 @@ curl -X POST http://localhost:8080/chaos
 ```
 
 ## Design Decisions
-- Redis as data storage - data model matches Redis relatively well, using hashes for stocks, list for audit log, set for wallet tracking. Additionaly since Redis works in memory, all actions are executed fast. Similar could be achieved with other kinds of databases, but resulting in more overhead efficiency loss.
+- Redis as data storage - data model matches Redis relatively well, using hashes for stocks, list for audit log, set for wallet tracking. Additionally since Redis works in memory, all actions are executed fast. Similar could be achieved with other kinds of databases, but resulting in more overhead efficiency loss.
 
 - Lua scripts for buy/sell atomicity - with two app instances running concurrently, a read-then-write approach creates a race condition where both instances could read the same bank quantity and both modify it. Redis executes Lua scripts atomically, so the entire check-and-update sequence is guaranteed to run on its own.
 
@@ -88,3 +88,5 @@ curl -X POST http://localhost:8080/chaos
 - No authentication - endpoints are open. Production would require at minimum some kind of API key validation.
 
 - Single Redis instance - Redis itself is a single point of failure in this setup. Production would use Redis Sentinel or Redis Cluster for high availability at the data layer too.
+
+- The `proxy_next_upstream` in nginx retries failed requests on the other instance. If a buy/sell Lua script completes successfully but the response doesn't reach nginx before the instance dies, nginx could retry the request on the other instance, executing the trade twice. This is an inherent trade-off between availability and exactly-once delivery.

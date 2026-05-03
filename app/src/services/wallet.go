@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	rdb "github.com/bulanda/stock-market/src/redis"
+	"github.com/redis/go-redis/v9"
 )
 
 type Wallet struct {
@@ -58,8 +60,11 @@ func GetWalletStockQuantity(ctx context.Context, walletID, stockName string) (in
 	}
 
 	qty, err := rdb.Client.HGet(ctx, rdb.WalletStocksKey(walletID), stockName).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, true, nil // stock not found, wallet exists
+	}
 	if err != nil {
-		return 0, true, nil // wallet exists but stock not found, return 0
+		return 0, true, err // actual error
 	}
 
 	q := 0

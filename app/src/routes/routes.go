@@ -133,5 +133,8 @@ func handleGetLog(w http.ResponseWriter, r *http.Request) {
 
 func handleChaos(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 	os.Exit(1)
 }
